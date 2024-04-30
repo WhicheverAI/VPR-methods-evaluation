@@ -20,3 +20,54 @@ def denormalize(x, mean=IMG_MEAN, std=IMG_STD):
         t.mul_(s).add_(m)
     # B, 3, H, W
     return torch.clamp(ten, 0, 1).permute(3, 0, 1, 2)
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import torch.utils.data as data
+
+from typing import List
+from PIL import Image
+
+
+class SimpleImageDataset(data.Dataset):
+    def __init__(self, image_paths:List[str], base_transform=None):
+        super().__init__()
+        self.image_paths = image_paths
+        self.base_transform = base_transform
+
+    def __getitem__(self, index):
+        image_path = self.image_paths[index]
+        pil_img = Image.open(image_path).convert("RGB")
+        normalized_img = self.base_transform(pil_img)
+        return normalized_img
+
+    def __len__(self):
+        return len(self.image_paths)
+
+from tqdm import tqdm
+class DeployedModel(nn.Module):
+    """Some Information about DeployedModel"""
+    def __init__(self, model, 
+                 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu'), 
+                 base_transform=None):
+        super(DeployedModel, self).__init__()
+        self.device = device
+        self.model = model.to(device)
+        self.batch_size = 1
+        self.num_workers = 1
+        self.base_transform = base_transform
+
+    def forward(self, image_paths:List[str]):
+        dataset = SimpleImageDataset(image_paths, self.base_transform)
+        dataloader = data.DataLoader(dataset, batch_size=self.batch_size, 
+                                     shuffle=False)
+        with torch.inference_mode():
+            all_descriptors = []
+            for images, indices in tqdm(dataloader, ncols=100):
+                descriptors = self.model(images.to(self.device))
+                descriptors = descriptors
+                descriptors.append(descriptors)
+            all_descriptors = torch.vstack(all_descriptors)
+            return all_descriptors

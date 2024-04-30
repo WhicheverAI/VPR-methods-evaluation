@@ -33,7 +33,17 @@ logging.info(f"The outputs are being saved in {output_folder}")
 
 model = vpr_models.get_model(args.method, args.backbone, args.descriptors_dimension, args)
 model = model.eval().to(args.device)
-
+# save the model that can directly map image to descriptors
+try:
+    from vpr_models.utils import DeployedModel
+    deployed_model = DeployedModel(model, device=args.device, base_transform=test_ds.base_transform)
+    torch.save(deployed_model,f"{output_folder}/deployed_model.pth")
+    import requests
+    image = requests.get("https://pic4.zhimg.com/v2-139d89c1b71dec1f9064d36f9452df3f_r.jpg", 
+                         headers={'User-Agent': 'Mozilla/5.0'}).content
+    print(deployed_model([image]).shape)
+except Exception as e:
+    print("Experimental Feature failed with error: ", e)
 
 test_ds = TestDataset(args.database_folder, args.queries_folder,
                       positive_dist_threshold=args.positive_dist_threshold)
