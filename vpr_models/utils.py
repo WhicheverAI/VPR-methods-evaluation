@@ -30,9 +30,14 @@ import torch.utils.data as data
 from typing import List
 from PIL import Image
 
+from torchvision import transforms
+default_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
 
 class SimpleImageDataset(data.Dataset):
-    def __init__(self, image_paths:List[str], base_transform=None):
+    def __init__(self, image_paths:List[str], base_transform=default_transform):
         super().__init__()
         self.image_paths = image_paths
         self.base_transform = base_transform
@@ -71,3 +76,22 @@ class DeployedModel(nn.Module):
                 descriptors.append(descriptors)
             all_descriptors = torch.vstack(all_descriptors)
             return all_descriptors
+
+
+# %%
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+class Debug(nn.Module):
+    """Some Information about Debug"""
+    def __init__(self):
+        super().__init__()
+    def forward(self, x):
+        # print(f"activation with shape {x.shape} is {x}")
+        # x = x[0]
+        # print(f"activation with shape {x.shape}. ")
+        print(f"activation with x={x}")
+        return x
+    
+#%%
