@@ -4,7 +4,7 @@ import torch
 from vpr_models import sfrs, salad, anyloc, convap, mixvpr, netvlad
 
 
-def get_model(method, backbone=None, descriptors_dimension=None, args=None):
+def get_model(method, backbone=None, descriptors_dimension=None, args=None, **kwargs):
     if method == "sfrs":
         model = sfrs.SFRSModel()
     elif method == "netvlad":
@@ -28,6 +28,7 @@ def get_model(method, backbone=None, descriptors_dimension=None, args=None):
                        'deep_vpr_model', 
                        source='local',
                     #    source='github',
+                    **kwargs
                        )
         model = anyloc.AnyLocWrapper(model=model, resize=[224, 224])
         import json

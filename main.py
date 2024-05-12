@@ -1,4 +1,5 @@
-
+#%%
+import io
 import sys
 import faiss
 import torch
@@ -10,11 +11,11 @@ from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
 
 import vpr_models
-import parser
 import commons
 import visualizations
 from test_dataset import TestDataset
-
+#%%
+import parser
 args = parser.parse_arguments()
 
 start_time = datetime.now()
@@ -30,24 +31,28 @@ with open(f"{output_folder}/config.json","w") as f:
     f.write(args_str)
 logging.info(f"Testing with {args.method} with a {args.backbone} backbone and descriptors dimension {args.descriptors_dimension}")
 logging.info(f"The outputs are being saved in {output_folder}")
-
+#%%
 model = vpr_models.get_model(args.method, args.backbone, args.descriptors_dimension, args)
 model = model.eval().to(args.device)
+
+
+test_ds = TestDataset(args.database_folder, args.queries_folder,
+                      positive_dist_threshold=args.positive_dist_threshold)
+logging.info(f"Testing on {test_ds}")
+
+#%%
 # save the model that can directly map image to descriptors
 try:
     from vpr_models.utils import DeployedModel
     deployed_model = DeployedModel(model, device=args.device, base_transform=test_ds.base_transform)
     torch.save(deployed_model,f"{output_folder}/deployed_model.pth")
     import requests
-    image = requests.get("https://pic4.zhimg.com/v2-139d89c1b71dec1f9064d36f9452df3f_r.jpg", 
-                         headers={'User-Agent': 'Mozilla/5.0'}).content
+    response = requests.get("https://pic4.zhimg.com/v2-139d89c1b71dec1f9064d36f9452df3f_r.jpg", 
+                         headers={'User-Agent': 'Mozilla/5.0'})
+    image = io.BytesIO(response.content)
     print(deployed_model([image]).shape)
 except Exception as e:
     print("Experimental Feature failed with error: ", e)
-
-test_ds = TestDataset(args.database_folder, args.queries_folder,
-                      positive_dist_threshold=args.positive_dist_threshold)
-logging.info(f"Testing on {test_ds}")
 
 with torch.inference_mode():
     logging.debug("Extracting database descriptors for evaluation/testing")
@@ -75,9 +80,8 @@ database_descriptors = all_descriptors[:test_ds.database_num]
 
 torch.save(queries_descriptors,f"{output_folder}/queries_descriptors.pth")
 torch.save(database_descriptors,f"{output_folder}/database_descriptors.pth")
-
-
-    
+#%%
+ 
 
 # Use a kNN to find predictions
 faiss_index = faiss.IndexFlatL2(args.descriptors_dimension)
@@ -128,7 +132,7 @@ with open(f"{output_folder}/results.json", 'w') as f:
 # Save visualizations of predictions
 if args.num_preds_to_save != 0:
     logging.info("Saving final predictions")
-    # For each query save num_preds_to_save predictions
+    # For each query save num_preds_to_save predescriptors_dimensiondictions
     visualizations.save_preds(predictions[:, :args.num_preds_to_save], test_ds,
                               output_folder, args.save_only_wrong_preds)
 

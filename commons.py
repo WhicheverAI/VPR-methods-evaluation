@@ -28,7 +28,9 @@ def setup_logging(output_folder: str, stdout: str = "debug", info_filename: str 
     """
     if os.path.exists(output_folder):
         raise FileExistsError(f"{output_folder} already exists!")
-    os.makedirs(output_folder)
+        # logging.warning(f"{output_folder} already exists!")
+        
+    os.makedirs(output_folder, exist_ok=True)
     # logging.Logger.manager.loggerDict.keys() to check which loggers are in use
     logging.getLogger('matplotlib.font_manager').disabled = True
     logging.getLogger('shapely').disabled = True
